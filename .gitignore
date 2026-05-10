@@ -1,0 +1,70 @@
+# Entornos virtuales
+.venv/
+env/
+venv/
+ENV/
+
+# Dependencias
+node_modules/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+
+# Variables de entorno
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+logs/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# GitHub workflows / config
+.github/
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+
+# Next.js
+.next/
+out/
+
+# Rust / WASM
+target/
+Cargo.lock
+*.wasm
+
+# Testing / cobertura
+.coverage
+htmlcov/
+.pytest_cache/
+.tox/
+
+# Datos temporales
+tmp/
+temp/
+*.tmp
+
+# Snapshots y replay (generados en runtime)
+*.zbw
+*.zbs
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Build artifacts
+frontend/dist/
+frontend/build/

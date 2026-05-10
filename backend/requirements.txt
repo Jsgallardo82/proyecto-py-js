@@ -1,0 +1,12 @@
+fastapi==0.115.12
+pydantic==2.11.4
+qutip==5.1.1
+scipy==1.17.1
+numpy==2.4.4
+uvicorn==0.46.0
+httpx==0.28.1
+xxhash==3.7.0
+msgpack==1.1.2
+python-multipart==0.0.28
+python-dotenv==1.2.2
+pytest==9.0.3

@@ -1,0 +1,250 @@
+@import "tailwindcss";
+
+/* ─── Design Tokens ─────────────────────────────────────────────────────── */
+
+:root {
+  /* Backgrounds */
+  --bg-primary: #0A0E27;
+  --bg-secondary: #141B2F;
+  --bg-elevated: #1B2238;
+  --bg-canvas: #0F1419;
+  --bg-hover: rgba(255,255,255,0.04);
+  --bg-active: rgba(255,255,255,0.08);
+
+  /* Text */
+  --text-primary: #E8E9F3;
+  --text-secondary: #9CA3AF;
+  --text-muted: #6B7280;
+  --text-disabled: #4B5563;
+
+  /* Scientific colors */
+  --color-massless: #06B6D4;
+  --color-zitter: #EF4444;
+  --color-pos-energy: #4F46E5;
+  --color-neg-energy: #EC4899;
+  --color-forbidden: #F97316;
+  --color-photon: #FBBF24;
+  --color-accent: #10B981;
+  --color-error: #EF4444;
+  --color-positron: #FB923C;
+
+  /* Spacing scale (base 4px) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+
+  /* Typography scale */
+  --text-xs: 10px;
+  --text-sm: 12px;
+  --text-base: 14px;
+  --text-lg: 16px;
+  --text-xl: 20px;
+  --text-2xl: 28px;
+
+  /* Border */
+  --border-subtle: rgba(255,255,255,0.06);
+  --border-medium: rgba(255,255,255,0.1);
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+}
+
+/* ─── Base ──────────────────────────────────────────────────────────────── */
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
+  font-size: var(--text-base);
+  line-height: 1.5;
+  margin: 0;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ─── Focus visible (WCAG AA) ──────────────────────────────────────────── */
+
+:focus-visible {
+  outline: 2px solid var(--color-pos-energy);
+  outline-offset: 2px;
+}
+
+/* ─── Typography utilities ─────────────────────────────────────────────── */
+
+.font-sans {
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+}
+
+.font-mono {
+  font-family: var(--font-geist-mono), 'Fira Code', ui-monospace, monospace;
+}
+
+.text-xs { font-size: var(--text-xs); }
+.text-sm { font-size: var(--text-sm); }
+.text-base { font-size: var(--text-base); }
+.text-lg { font-size: var(--text-lg); }
+.text-xl { font-size: var(--text-xl); }
+.text-2xl { font-size: var(--text-2xl); }
+
+/* ─── Spacing utilities ────────────────────────────────────────────────── */
+
+.gap-1 { gap: var(--space-1); }
+.gap-2 { gap: var(--space-2); }
+.gap-3 { gap: var(--space-3); }
+.gap-4 { gap: var(--space-4); }
+
+.p-2 { padding: var(--space-2); }
+.p-3 { padding: var(--space-3); }
+.p-4 { padding: var(--space-4); }
+
+/* ─── Surface card pattern ─────────────────────────────────────────────── */
+
+.surface {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+}
+
+.surface-elevated {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-md);
+}
+
+/* ─── Hover states (CSS, no JS) ────────────────────────────────────────── */
+
+.hover-lift {
+  transition: background-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+}
+.hover-lift:hover {
+  background-color: var(--bg-hover);
+  transform: translateY(-1px);
+}
+.hover-lift:active {
+  background-color: var(--bg-active);
+  transform: translateY(0);
+}
+
+/* ─── Skeleton loading ─────────────────────────────────────────────────── */
+
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.8; }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--bg-secondary) 25%,
+    var(--bg-elevated) 50%,
+    var(--bg-secondary) 75%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
+  border-radius: var(--radius-sm);
+}
+
+/* ─── Tooltip ──────────────────────────────────────────────────────────── */
+
+.tooltip {
+  position: relative;
+}
+.tooltip::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%) scale(0.95);
+  padding: var(--space-2) var(--space-3);
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-medium);
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  z-index: 100;
+}
+.tooltip:hover::after {
+  opacity: 1;
+  transform: translateX(-50%) scale(1);
+}
+
+/* ─── Responsive breakpoints ───────────────────────────────────────────── */
+
+@media (max-width: 1024px) {
+  .sidebar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    max-height: 40vh;
+    z-index: 40;
+    border-top: 1px solid var(--border-subtle);
+    border-left: none;
+  }
+  .main-content {
+    padding-bottom: 40vh;
+  }
+}
+
+@media (max-width: 768px) {
+  .tab-label {
+    font-size: var(--text-xs);
+    padding: var(--space-2) var(--space-3);
+  }
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ─── Reduced motion ───────────────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ─── Scrollbar ────────────────────────────────────────────────────────── */
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+}
+::-webkit-scrollbar-thumb {
+  background: #2D3748;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #4A5568;
+}
+
+/* ─── Selection ────────────────────────────────────────────────────────── */
+
+::selection {
+  background: rgba(79, 70, 229, 0.3);
+  color: var(--text-primary);
+}
