@@ -10,40 +10,64 @@
 
 import { useEffect, useRef, useCallback } from 'react';
 import { useSimulationContext } from '../context/SimulationContext';
+import { useAppContext } from '../context/AppContext';
 
-const TRAIL_FRAMES = 100;   // últimos N frames de estela
-const C_ELECTRON = '#06B6D4';
-const C_TRAIL = 'rgba(6, 182, 212, 0.4)';
-const C_BG = '#0F1419';
-const C_GRID = 'rgba(255,255,255,0.04)';
+const TRAIL_FRAMES = 100;
+const C_ELECTRON      = '#06B6D4';
 const C_MASSLESS_PATH = 'rgba(6, 182, 212, 0.25)';
-const C_TEXT = '#9CA3AF';
+
+function getThemeColors(isDark) {
+  return isDark
+    ? {
+        bg:          '#0F1419',
+        grid:        'rgba(255,255,255,0.04)',
+        label:       'rgba(255,255,255,0.12)',
+        placeholder: 'rgba(255,255,255,0.15)',
+        text:        '#9CA3AF',
+        masslessLabel: 'rgba(6,182,212,0.3)',
+      }
+    : {
+        bg:          '#F0F4F8',
+        grid:        'rgba(0,0,0,0.06)',
+        label:       'rgba(0,0,0,0.25)',
+        placeholder: 'rgba(0,0,0,0.3)',
+        text:        '#4A5568',
+        masslessLabel: 'rgba(6,182,212,0.7)',
+      };
+}
 
 export default function ParticleView() {
-  const { state } = useSimulationContext();
-  const canvasRef = useRef(null);
-  const animRef = useRef(null);
-  const stateRef = useRef(state);
+  const { state }           = useSimulationContext();
+  const { state: appState } = useAppContext();
+  const canvasRef           = useRef(null);
+  const animRef             = useRef(null);
+  const stateRef            = useRef(state);
+  const appStateRef         = useRef(appState);
+  const trailRef            = useRef([]);
+
   useEffect(() => { stateRef.current = state; });
-  const trailRef = useRef([]);  // circular buffer of {x,y} canvas coords
+  useEffect(() => { appStateRef.current = appState; });
 
   const draw = useCallback(() => {
-    const state = stateRef.current;
-    const canvas = canvasRef.current;
+    const state    = stateRef.current;
+    const appState = appStateRef.current;
+    const canvas   = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     const W = canvas.width;
     const H = canvas.height;
 
+    const C = getThemeColors(appState.theme === 'dark');
+
     // Clear
-    ctx.fillStyle = C_BG;
+    ctx.fillStyle = C.bg;
     ctx.fillRect(0, 0, W, H);
 
-    // ── Grid ────────────────────────────────────────────────────────
-    ctx.strokeStyle = C_GRID;
-    ctx.lineWidth = 1;
-    const gridStep = 40;
+    // ── Grid ─────────────────────────────────────────────────────────
+    ctx.strokeStyle = C.grid;
+    ctx.lineWidth   = 1;
+    const gridStep  = 40;
     for (let x = 0; x < W; x += gridStep) {
       ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
     }
@@ -51,45 +75,37 @@ export default function ParticleView() {
       ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
     }
 
-    // ── Label ────────────────────────────────────────────────────────
-    ctx.fillStyle = 'rgba(255,255,255,0.12)';
-    ctx.font = "11px 'Geist Mono', monospace";
-    ctx.textAlign = 'center';
+    // ── Label ─────────────────────────────────────────────────────────
+    ctx.fillStyle  = C.label;
+    ctx.font       = "11px 'Geist Mono', monospace";
+    ctx.textAlign  = 'center';
     ctx.fillText('VACUUM STATE: DIRAC SEA', W / 2, 24);
 
-    const { simData, playhead, isPlaying } = state;
+    const { simData, playhead } = state;
 
     if (!simData || simData.S1.length < 2) {
-      // Placeholder electron in center
       drawElectron(ctx, W / 2, H / 2, 16);
-      ctx.fillStyle = 'rgba(255,255,255,0.15)';
-      ctx.font = '13px Geist, system-ui';
-      ctx.textAlign = 'center';
+      ctx.fillStyle  = C.placeholder;
+      ctx.font       = '13px Geist, system-ui';
+      ctx.textAlign  = 'center';
       ctx.fillText('Ejecuta una simulación para animar la partícula', W / 2, H / 2 + 40);
       return;
     }
 
-    const n = simData.S1.length;
-    const S1 = simData.S1;
-    const tArr = simData.t;
-
-    // Map S1 → canvas coords
+    const n     = simData.S1.length;
+    const S1    = simData.S1;
+    const tArr  = simData.t;
     const S1min = Math.min(...S1);
     const S1max = Math.max(...S1);
     const S1range = S1max - S1min || 1;
 
-    // Electron moves left→right along X (time axis), Y oscillates with S1
     const margin = 40;
-    function tToX(i) {
-      return margin + (i / (n - 1)) * (W - 2 * margin);
-    }
-    function s1ToY(v) {
-      return H / 2 + ((v - (S1min + S1max) / 2) / S1range) * (H * 0.35);
-    }
+    function tToX(i)  { return margin + (i / (n - 1)) * (W - 2 * margin); }
+    function s1ToY(v) { return H / 2 + ((v - (S1min + S1max) / 2) / S1range) * (H * 0.35); }
 
-    // ── Massless baseline (straight horizontal) ──────────────────────
+    // ── Massless baseline ─────────────────────────────────────────────
     ctx.strokeStyle = C_MASSLESS_PATH;
-    ctx.lineWidth = 1;
+    ctx.lineWidth   = 1;
     ctx.setLineDash([4, 6]);
     ctx.beginPath();
     ctx.moveTo(margin, H / 2);
@@ -97,20 +113,19 @@ export default function ParticleView() {
     ctx.stroke();
     ctx.setLineDash([]);
 
-    ctx.fillStyle = 'rgba(6,182,212,0.3)';
-    ctx.font = "9px 'Geist Mono', monospace";
+    ctx.fillStyle = C.masslessLabel;
+    ctx.font      = "9px 'Geist Mono', monospace";
     ctx.textAlign = 'left';
     ctx.fillText('MASSLESS PATH (C)', margin + 4, H / 2 - 6);
 
-    // ── Build/update trail ───────────────────────────────────────────
+    // ── Build/update trail ────────────────────────────────────────────
     const currX = tToX(playhead);
     const currY = s1ToY(S1[playhead]);
-
     const trail = trailRef.current;
     trail.push({ x: currX, y: currY });
     if (trail.length > TRAIL_FRAMES) trail.shift();
 
-    // ── Draw trail (punteada, fading) ────────────────────────────────
+    // ── Draw trail ────────────────────────────────────────────────────
     if (trail.length > 1) {
       ctx.setLineDash([3, 5]);
       ctx.lineWidth = 1.5;
@@ -125,9 +140,9 @@ export default function ParticleView() {
       ctx.setLineDash([]);
     }
 
-    // ── ZB full path (faint) ─────────────────────────────────────────
+    // ── ZB full path (faint) ──────────────────────────────────────────
     ctx.strokeStyle = 'rgba(239,68,68,0.15)';
-    ctx.lineWidth = 1;
+    ctx.lineWidth   = 1;
     ctx.beginPath();
     for (let i = 0; i <= playhead; i++) {
       const x = tToX(i);
@@ -137,21 +152,19 @@ export default function ParticleView() {
     }
     ctx.stroke();
 
-    // ── Electron ─────────────────────────────────────────────────────
+    // ── Electron ──────────────────────────────────────────────────────
     drawElectron(ctx, currX, currY, 14);
 
     // ── Progress text ─────────────────────────────────────────────────
-    ctx.fillStyle = C_TEXT;
-    ctx.font = "10px 'Geist Mono', monospace";
-    ctx.textAlign = 'right';
+    ctx.fillStyle  = C.text;
+    ctx.font       = "10px 'Geist Mono', monospace";
+    ctx.textAlign  = 'right';
     const tNow = tArr[playhead]?.toFixed(1) ?? '0.0';
     ctx.fillText(`t = ${tNow} μs`, W - margin, H - 12);
   }, []);
 
   // Reset trail when sim data changes
-  useEffect(() => {
-    trailRef.current = [];
-  }, [state.simData]);
+  useEffect(() => { trailRef.current = []; }, [state.simData]);
 
   useEffect(() => {
     function loop() {
@@ -166,8 +179,8 @@ export default function ParticleView() {
     function resize() {
       const canvas = canvasRef.current;
       if (!canvas || !canvas.parentElement) return;
-      const rect = canvas.parentElement.getBoundingClientRect();
-      canvas.width = rect.width || 600;
+      const rect    = canvas.parentElement.getBoundingClientRect();
+      canvas.width  = rect.width  || 600;
       canvas.height = rect.height || 400;
     }
     resize();
@@ -191,30 +204,27 @@ export default function ParticleView() {
 // ── Electron with glow ────────────────────────────────────────────────────
 
 function drawElectron(ctx, x, y, r) {
-  // Outer glow
   const glow = ctx.createRadialGradient(x, y, 0, x, y, r * 3);
-  glow.addColorStop(0, 'rgba(6, 182, 212, 0.4)');
+  glow.addColorStop(0,   'rgba(6, 182, 212, 0.4)');
   glow.addColorStop(0.5, 'rgba(6, 182, 212, 0.1)');
-  glow.addColorStop(1, 'rgba(6, 182, 212, 0)');
+  glow.addColorStop(1,   'rgba(6, 182, 212, 0)');
   ctx.fillStyle = glow;
   ctx.beginPath();
   ctx.arc(x, y, r * 3, 0, Math.PI * 2);
   ctx.fill();
 
-  // Core circle
   const grad = ctx.createRadialGradient(x - r * 0.3, y - r * 0.3, r * 0.1, x, y, r);
-  grad.addColorStop(0, '#A5F3FC');
+  grad.addColorStop(0,   '#A5F3FC');
   grad.addColorStop(0.6, '#06B6D4');
-  grad.addColorStop(1, '#0E7490');
+  grad.addColorStop(1,   '#0E7490');
   ctx.fillStyle = grad;
   ctx.beginPath();
   ctx.arc(x, y, r, 0, Math.PI * 2);
   ctx.fill();
 
-  // Label
-  ctx.fillStyle = '#0A0E27';
-  ctx.font = `bold ${Math.max(8, r * 0.7)}px Geist, system-ui`;
-  ctx.textAlign = 'center';
+  ctx.fillStyle    = '#0A0E27';
+  ctx.font         = `bold ${Math.max(8, r * 0.7)}px Geist, system-ui`;
+  ctx.textAlign    = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText('e⁻', x, y);
   ctx.textBaseline = 'alphabetic';

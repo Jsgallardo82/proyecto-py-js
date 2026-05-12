@@ -12,36 +12,45 @@
 
 import { useEffect, useRef, useCallback } from 'react';
 import { useSimulationContext } from '../context/SimulationContext';
+import { useAppContext } from '../context/AppContext';
 
-// Colores canónicos (Engine Spec v6.0 §17)
-const C_POS_ZONE = 'rgba(79, 70, 229, 0.15)';      // #4F46E5
-const C_POS_BORDER = '#4F46E5';
-const C_NEG_ZONE = 'rgba(236, 72, 153, 0.15)';     // #EC4899
-const C_NEG_BORDER = '#EC4899';
-const C_FORBIDDEN = 'rgba(249, 115, 22, 0.25)';    // #F97316
+// Colores canónicos científicos — fijos en ambos temas (Engine Spec v6.0 §17)
+const C_POS_ZONE         = 'rgba(79, 70, 229, 0.15)';
+const C_POS_BORDER       = '#4F46E5';
+const C_NEG_ZONE         = 'rgba(236, 72, 153, 0.15)';
+const C_NEG_BORDER       = '#EC4899';
+const C_FORBIDDEN        = 'rgba(249, 115, 22, 0.25)';
 const C_FORBIDDEN_BORDER = '#F97316';
-const C_PHOTON = '#FBBF24';                          // amarillo/dorado
-const C_ELECTRON = '#4F46E5';
-const C_POSITRON = '#FB923C';                        // naranja punteado
-const C_BG = '#0A0E27';
-const C_TEXT = '#E8E9F3';
-const C_MUTED = '#9CA3AF';
+const C_PHOTON           = '#FBBF24';
+const C_ELECTRON         = '#4F46E5';
+const C_POSITRON         = '#FB923C';
+
+function getThemeColors(isDark) {
+  return isDark
+    ? { bg: '#0A0E27', text: '#E8E9F3', muted: '#9CA3AF' }
+    : { bg: '#F0F4F8', text: '#1A202C', muted: '#4A5568' };
+}
 
 // Grid electrons spacing
 const GRID_SPACING = 24;
 const ELECTRON_R = 5;
 
 export default function DiracSeaView() {
-  const { state } = useSimulationContext();
-  const canvasRef = useRef(null);
-  const animRef = useRef(null);
-  const stateRef = useRef(state);
+  const { state }           = useSimulationContext();
+  const { state: appState } = useAppContext();
+  const canvasRef           = useRef(null);
+  const animRef             = useRef(null);
+  const stateRef            = useRef(state);
+  const appStateRef         = useRef(appState);
+  const frameRef            = useRef(0);
+
   useEffect(() => { stateRef.current = state; });
-  const frameRef = useRef(0);
+  useEffect(() => { appStateRef.current = appState; });
 
   const draw = useCallback(() => {
-    const state = stateRef.current;
-    const canvas = canvasRef.current;
+    const state    = stateRef.current;
+    const appState = appStateRef.current;
+    const canvas   = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
@@ -50,7 +59,9 @@ export default function DiracSeaView() {
     frameRef.current++;
     const frame = frameRef.current;
 
-    ctx.fillStyle = C_BG;
+    const C = getThemeColors(appState.theme === 'dark');
+
+    ctx.fillStyle = C.bg;
     ctx.fillRect(0, 0, W, H);
 
     const { diracData, photonFired, pairCreated, showInterference, photonEnergyFactor } = state;
@@ -77,7 +88,7 @@ export default function DiracSeaView() {
     ctx.font = "bold 11px 'Geist Mono', monospace";
     ctx.textAlign = 'left';
     ctx.fillText('POSITIVE ENERGY STATE (ELECTRONS)', 12, 18);
-    ctx.fillStyle = C_MUTED;
+    ctx.fillStyle = C.muted;
     ctx.font = "10px 'Geist Mono', monospace";
     ctx.fillText('E ≥ mc²', 12, 32);
 
@@ -104,7 +115,7 @@ export default function DiracSeaView() {
     ctx.font = "bold 11px 'Geist Mono', monospace";
     ctx.textAlign = 'left';
     ctx.fillText('DIRAC SEA (NEGATIVE ENERGY)', 12, zoneForbiddenY + zoneForbiddenH + 18);
-    ctx.fillStyle = C_MUTED;
+    ctx.fillStyle = C.muted;
     ctx.font = "10px 'Geist Mono', monospace";
     ctx.fillText('E ≤ −mc²', 12, zoneForbiddenY + zoneForbiddenH + 32);
 
@@ -126,7 +137,7 @@ export default function DiracSeaView() {
       const elecX = W * 0.55;
       const elecY = zonePosH * 0.5;
       drawSolidElectron(ctx, elecX, elecY, 10, C_ELECTRON);
-      ctx.fillStyle = C_TEXT;
+      ctx.fillStyle = C.text;
       ctx.font = "bold 10px 'Geist Mono', monospace";
       ctx.textAlign = 'left';
       ctx.fillText('NEW ELECTRON (e⁻)', elecX + 14, elecY + 4);
@@ -165,7 +176,7 @@ export default function DiracSeaView() {
     }
 
     // ── Photon energy indicator ──────────────────────────────────────
-    ctx.fillStyle = C_MUTED;
+    ctx.fillStyle = C.muted;
     ctx.font = "10px 'Geist Mono', monospace";
     ctx.textAlign = 'right';
     ctx.fillText(

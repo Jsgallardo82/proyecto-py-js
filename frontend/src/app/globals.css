@@ -54,6 +54,25 @@
   --radius-lg: 12px;
 }
 
+/* ─── Light mode overrides ─────────────────────────────────────────────── */
+
+[data-theme="light"] {
+  --bg-primary: #F0F4F8;
+  --bg-secondary: #E2E8F0;
+  --bg-elevated: #CBD5E0;
+  --bg-canvas: #FFFFFF;
+  --bg-hover: rgba(0,0,0,0.04);
+  --bg-active: rgba(0,0,0,0.08);
+
+  --text-primary: #1A202C;
+  --text-secondary: #4A5568;
+  --text-muted: #718096;
+  --text-disabled: #A0AEC0;
+
+  --border-subtle: rgba(0,0,0,0.08);
+  --border-medium: rgba(0,0,0,0.14);
+}
+
 /* ─── Base ──────────────────────────────────────────────────────────────── */
 
 * {

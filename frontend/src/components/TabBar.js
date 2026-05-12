@@ -3,21 +3,22 @@
 /**
  * TabBar — Barra de navegación por las 3 vistas.
  *
- * Tabs: DATA DASHBOARD | PARTICLE VIEW | DIRAC SEA VIEW
- * Engine Spec v6.0 §13, mockups img-001.
+ * Prop `inline` (bool): cuando es true se renderiza sin borde ni fondo propio,
+ * para embeberse dentro del header ISOTOPE.
  */
 
 import { useSimulationContext } from '../context/SimulationContext';
+import { useAppContext } from '../context/AppContext';
+import { t } from '../lib/translations';
 
-const TABS = [
-  { id: 'dashboard', label: 'DATA DASHBOARD' },
-  { id: 'particle', label: 'PARTICLE VIEW' },
-  { id: 'dirac', label: 'DIRAC SEA VIEW' },
-  { id: '3d', label: '3D VIEW' },
-];
+const TAB_IDS = ['dashboard', 'particle', 'dirac', '3d'];
 
-export default function TabBar() {
-  const { state, dispatch } = useSimulationContext();
+export default function TabBar({ inline = false }) {
+  const { state: simState, dispatch } = useSimulationContext();
+  const { state: appState } = useAppContext();
+  const tr = t[appState.lang].tabs;
+
+  const TABS = TAB_IDS.map((id) => ({ id, label: tr[id] }));
 
   return (
     <nav
@@ -26,14 +27,18 @@ export default function TabBar() {
       style={{
         display: 'flex',
         gap: '0',
-        borderBottom: '1px solid rgba(255,255,255,0.06)',
-        background: '#141B2F',
-        flexShrink: 0,
-        paddingLeft: '8px',
+        ...(inline
+          ? {}
+          : {
+              borderBottom: '1px solid var(--border-subtle)',
+              background: 'var(--bg-secondary)',
+              paddingLeft: '8px',
+              flexShrink: 0,
+            }),
       }}
     >
       {TABS.map((tab) => {
-        const active = state.activeTab === tab.id;
+        const active = simState.activeTab === tab.id;
         return (
           <button
             key={tab.id}
@@ -42,18 +47,25 @@ export default function TabBar() {
             aria-controls={`panel-${tab.id}`}
             onClick={() => dispatch({ type: 'SET_ACTIVE_TAB', payload: tab.id })}
             style={{
-              padding: '10px 20px',
+              padding: inline ? '0 16px' : '10px 20px',
+              height: inline ? '44px' : 'auto',
               background: 'none',
               border: 'none',
               borderBottom: active ? '2px solid #06B6D4' : '2px solid transparent',
-              color: active ? '#06B6D4' : '#9CA3AF',
+              color: active ? '#06B6D4' : 'var(--text-secondary)',
               fontSize: '11px',
               fontWeight: active ? 700 : 500,
               letterSpacing: '0.08em',
-              fontFamily: "'Geist Mono', monospace",
+              fontFamily: 'var(--font-geist-mono), monospace',
               cursor: 'pointer',
               transition: 'color 0.15s, border-color 0.15s',
               outline: 'none',
+            }}
+            onMouseEnter={(e) => {
+              if (!active) e.currentTarget.style.color = 'var(--text-primary)';
+            }}
+            onMouseLeave={(e) => {
+              if (!active) e.currentTarget.style.color = 'var(--text-secondary)';
             }}
             onFocus={(e) => (e.currentTarget.style.outline = '2px solid #4F46E5')}
             onBlur={(e) => (e.currentTarget.style.outline = 'none')}

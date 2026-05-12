@@ -2,35 +2,58 @@
 
 import { useRef, useEffect, useCallback } from 'react';
 import { useSimulationContext } from '../context/SimulationContext';
+import { useAppContext } from '../context/AppContext';
 import ScientificErrorBoundary from './ScientificErrorBoundary';
 
-// Colores canónicos (Engine Spec v6.0 §17)
+// Colores científicos canónicos — fijos en ambos modos (Engine Spec v6.0 §17)
 const C_MASSLESS = '#06B6D4';
-const C_ZITTER = '#EF4444';
-const C_ACCENT = '#10B981';
-const C_BG_CANVAS = '#0F1419';
-const C_GRID = 'rgba(255,255,255,0.06)';
-const C_AXIS = 'rgba(255,255,255,0.25)';
-const C_TEXT = '#9CA3AF';
+const C_ZITTER   = '#EF4444';
+
+function getThemeColors(isDark) {
+  return isDark
+    ? {
+        bg:    '#0F1419',
+        grid:  'rgba(255,255,255,0.06)',
+        axis:  'rgba(255,255,255,0.25)',
+        text:  '#9CA3AF',
+        title: '#E8E9F3',
+        placeholder: 'rgba(255,255,255,0.15)',
+      }
+    : {
+        bg:    '#FFFFFF',
+        grid:  'rgba(0,0,0,0.08)',
+        axis:  'rgba(0,0,0,0.3)',
+        text:  '#4A5568',
+        title: '#1A202C',
+        placeholder: 'rgba(0,0,0,0.25)',
+      };
+}
 
 function DataDashboardInner() {
-  const { state } = useSimulationContext();
-  const canvasRef = useRef(null);
-  const animRef = useRef(null);
-  const stateRef = useRef(state);
+  const { state }               = useSimulationContext();
+  const { state: appState }     = useAppContext();
+  const canvasRef               = useRef(null);
+  const animRef                 = useRef(null);
+  const stateRef                = useRef(state);
+  const appStateRef             = useRef(appState);
+
   useEffect(() => { stateRef.current = state; });
+  useEffect(() => { appStateRef.current = appState; });
 
   const draw = useCallback(() => {
-    const state = stateRef.current;
-    const canvas = canvasRef.current;
+    const state    = stateRef.current;
+    const appState = appStateRef.current;
+    const canvas   = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     const W = canvas.width;
     const H = canvas.height;
 
+    const C = getThemeColors(appState.theme === 'dark');
+
     // Clear
-    ctx.fillStyle = C_BG_CANVAS;
+    ctx.fillStyle = C.bg;
     ctx.fillRect(0, 0, W, H);
 
     const pad = { top: 40, right: 20, bottom: 50, left: 60 };
@@ -40,7 +63,7 @@ function DataDashboardInner() {
     const { simData, playhead, comparisonData, fftMode, fftData } = state;
 
     // ── Grid ────────────────────────────────────────────────────────
-    ctx.strokeStyle = C_GRID;
+    ctx.strokeStyle = C.grid;
     ctx.lineWidth = 1;
     const gridX = 6, gridY = 5;
     for (let i = 0; i <= gridX; i++) {
@@ -53,11 +76,10 @@ function DataDashboardInner() {
     }
 
     // ── Axes labels ─────────────────────────────────────────────────
-    ctx.fillStyle = C_TEXT;
+    ctx.fillStyle = C.text;
     ctx.font = "11px 'Geist Mono', monospace";
     ctx.textAlign = 'center';
 
-    // X axis: tiempo [μs]
     const tMaxLabel = simData?.t_max ?? 200;
     for (let i = 0; i <= gridX; i++) {
       const t = (i / gridX) * tMaxLabel;
@@ -66,7 +88,6 @@ function DataDashboardInner() {
     }
     ctx.fillText('Tiempo (μs)', pad.left + plotW / 2, H - 4);
 
-    // Y axis: ⟨S₁⟩ [μm]
     ctx.textAlign = 'right';
     const yRange = getYRange(simData, comparisonData);
     for (let j = 0; j <= gridY; j++) {
@@ -75,7 +96,6 @@ function DataDashboardInner() {
       ctx.fillText(val.toFixed(3), pad.left - 6, y + 4);
     }
 
-    // Y-axis title (rotated)
     ctx.save();
     ctx.translate(14, pad.top + plotH / 2);
     ctx.rotate(-Math.PI / 2);
@@ -84,14 +104,13 @@ function DataDashboardInner() {
     ctx.restore();
 
     // ── Title ────────────────────────────────────────────────────────
-    ctx.fillStyle = '#E8E9F3';
+    ctx.fillStyle = C.title;
     ctx.font = 'bold 13px Geist, system-ui';
     ctx.textAlign = 'left';
     ctx.fillText('Expected Position (S₁) vs. Time (μs)', pad.left, pad.top - 14);
 
     if (!simData) {
-      // Placeholder
-      ctx.fillStyle = 'rgba(255,255,255,0.15)';
+      ctx.fillStyle = C.placeholder;
       ctx.font = '14px Geist, system-ui';
       ctx.textAlign = 'center';
       ctx.fillText('Presiona PLAY SIMULATION para comenzar', pad.left + plotW / 2, pad.top + plotH / 2);
@@ -105,22 +124,16 @@ function DataDashboardInner() {
       return;
     }
 
-    // ── Helper to map data to canvas coords ──────────────────────────
     const tArr = simData.t;
     const n = tArr.length;
     const tMin = tArr[0] ?? 0;
     const tMax = tArr[n - 1] ?? 200;
 
-    function toX(t) {
-      return pad.left + ((t - tMin) / (tMax - tMin)) * plotW;
-    }
-    function toY(v) {
-      return pad.top + plotH - ((v - yRange.min) / (yRange.max - yRange.min)) * plotH;
-    }
+    function toX(t) { return pad.left + ((t - tMin) / (tMax - tMin)) * plotW; }
+    function toY(v) { return pad.top + plotH - ((v - yRange.min) / (yRange.max - yRange.min)) * plotH; }
 
-    // ── Massless baseline (straight line at mean + linear drift) ─────
+    // ── Massless baseline ─────────────────────────────────────────────
     const S1 = simData.S1;
-    const S1_mean = n > 0 ? S1.reduce((a, b) => a + b, 0) / n : 0;
     const slope = n > 1 ? (S1[n - 1] - S1[0]) / (tMax - tMin) : 0;
 
     ctx.strokeStyle = C_MASSLESS;
@@ -135,7 +148,7 @@ function DataDashboardInner() {
     }
     ctx.stroke();
 
-    // ── ZB curve (from backend simulation) ──────────────────────────
+    // ── ZB curve ─────────────────────────────────────────────────────
     ctx.strokeStyle = C_ZITTER;
     ctx.lineWidth = 2;
     ctx.setLineDash([]);
@@ -148,7 +161,7 @@ function DataDashboardInner() {
     }
     ctx.stroke();
 
-    // ── Comparison solver curves ─────────────────────────────────────
+    // ── Comparison solver curves ──────────────────────────────────────
     if (comparisonData?.cn) {
       const cnS1 = comparisonData.cn.S1;
       ctx.strokeStyle = '#4F46E5';
@@ -165,7 +178,7 @@ function DataDashboardInner() {
       ctx.setLineDash([]);
     }
 
-    // ── Playhead marker ──────────────────────────────────────────────
+    // ── Playhead marker ───────────────────────────────────────────────
     if (playhead > 0 && playhead < n) {
       const markerX = toX(tArr[playhead]);
       ctx.fillStyle = C_ZITTER;
@@ -176,7 +189,6 @@ function DataDashboardInner() {
       ctx.closePath();
       ctx.fill();
 
-      // Vertical line
       ctx.strokeStyle = 'rgba(239,68,68,0.4)';
       ctx.lineWidth = 1;
       ctx.setLineDash([2, 2]);
@@ -187,7 +199,7 @@ function DataDashboardInner() {
       ctx.setLineDash([]);
     }
 
-    // ── Legend ───────────────────────────────────────────────────────
+    // ── Legend ────────────────────────────────────────────────────────
     drawLegend(ctx, W, pad, false, !!comparisonData?.cn);
   }, []);
 
@@ -200,7 +212,6 @@ function DataDashboardInner() {
     return () => cancelAnimationFrame(animRef.current);
   }, [draw]);
 
-  // Resize canvas to container
   useEffect(() => {
     function resize() {
       const canvas = canvasRef.current;
@@ -253,7 +264,7 @@ function drawLegend(ctx, W, pad, isFft = false, hasCN = false) {
     ? [{ color: C_MASSLESS, label: '— FFT POWER' }]
     : [
         { color: C_MASSLESS, label: '— MASSLESS (C)' },
-        { color: C_ZITTER, label: '— TREMBLING (ZITTER)' },
+        { color: C_ZITTER,   label: '— TREMBLING (ZITTER)' },
         ...(hasCN ? [{ color: '#4F46E5', label: '- - CN SOLVER', dash: true }] : []),
       ];
 
@@ -295,7 +306,6 @@ function drawFFT(ctx, fftData, pad, plotW, plotH) {
     ctx.fillRect(x, y, Math.max(1, barW - 1), h);
   }
 
-  // Dominant peak label
   const peakIdx = power.slice(1).indexOf(Math.max(...power.slice(1))) + 1;
   const peakFreq = freqs[peakIdx];
   ctx.fillStyle = '#FBBF24';

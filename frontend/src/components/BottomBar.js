@@ -33,8 +33,8 @@ export default function BottomBar() {
       justifyContent: 'center',
       gap: '12px',
       padding: '10px 20px',
-      background: '#141B2F',
-      borderTop: '1px solid rgba(255,255,255,0.06)',
+      background: 'var(--bg-secondary)',
+      borderTop: '1px solid var(--border-subtle)',
       flexShrink: 0,
     }}>
       {/* RESET */}
