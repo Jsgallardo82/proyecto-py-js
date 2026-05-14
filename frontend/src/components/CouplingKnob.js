@@ -7,10 +7,11 @@
  *   1. Arrastre circular  — arrastra en sentido horario/antihorario
  *   2. Rueda del mouse    — scroll arriba/abajo
  *   3. Click en el arco   — salta directamente al ángulo clickeado
- *   4. Input numérico     — escribe un valor entre 1 y 10 (escala log)
+ *   4. Input numérico     — frecuencia en Hz
  */
 
 import { useRef, useCallback, useState } from 'react';
+import VerticalFader from './VerticalFader';
 
 // ─── Constantes de rotación ───────────────────────────────────────────────
 const START_ANGLE    = -135;   // ángulo mínimo del arco (grados, reloj)
@@ -33,7 +34,7 @@ function arcPath(cx, cy, r, startDeg, endDeg) {
 
 // ─── Componente principal ─────────────────────────────────────────────────
 
-export default function CouplingKnob({ value, min, max, onChange, label, isDark }) {
+export default function CouplingKnob({ value, min, max, onChange, label, isDark, faderAriaLabel }) {
   const intensity = (value - min) / (max - min);   // [0, 1]
   const isOff     = intensity < 0.01;
 
@@ -108,6 +109,8 @@ export default function CouplingKnob({ value, min, max, onChange, label, isDark 
 
   // ── Dimensiones del knob ─────────────────────────────────────────────
   const KNOB_SIZE  = 140;
+  const FADER_COL_W = 46; // ancho aprox. ticks + carril (VerticalFader)
+  const CONTROL_STRIP_W = KNOB_SIZE + 14 + FADER_COL_W;
   const IMG_SIZE   = 110;
   const IMG_OFF    = (KNOB_SIZE - IMG_SIZE) / 2;
   const cx         = KNOB_SIZE / 2;
@@ -210,87 +213,108 @@ export default function CouplingKnob({ value, min, max, onChange, label, isDark 
         <AtomSVG intensity={intensity} particleGlow={particleGlow} isDark={isDark} />
       </div>
 
-      {/* ── Perilla + controles ────────────────────────────────────────── */}
+      {/* ── Perilla + fader + controles ───────────────────────────────── */}
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
 
-        {/* Valor numérico en Hz */}
-        <span style={{
-          fontSize: '11px', fontWeight: 700, color: valueColor,
-          fontFamily: "'Geist Mono', monospace", letterSpacing: '0.04em',
+        <div style={{
+          display: 'flex',
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: '14px',
+          justifyContent: 'center',
         }}>
-          {value.toExponential(2)} Hz
-        </span>
 
-        {/* Contenedor del knob */}
-        <div
-          ref={knobRef}
-          style={{
-            position: 'relative',
-            width: `${KNOB_SIZE}px`,
-            height: `${KNOB_SIZE}px`,
-            cursor: 'grab',
-            touchAction: 'none',
-            overflow: 'visible',
-          }}
-          onPointerDown={onPointerDown}
-          onPointerMove={onPointerMove}
-          onPointerUp={onPointerUp}
-          onPointerLeave={onPointerUp}
-          onWheel={onWheel}
-          role="slider"
-          aria-label={`${label}: ${value.toExponential(2)} Hz`}
-          aria-valuemin={min}
-          aria-valuemax={max}
-          aria-valuenow={value}
-        >
-          {/* Capa 1 — arcos SVG (con click interactivo en la pista) */}
-          <svg
-            width={KNOB_SIZE}
-            height={KNOB_SIZE}
-            viewBox={`0 0 ${KNOB_SIZE} ${KNOB_SIZE}`}
-            style={{ position: 'absolute', top: 0, left: 0 }}
-            aria-hidden="true"
-          >
-            {/* Pista completa — clickeable */}
-            <path
-              d={arcPath(cx, cy, arcR, START_ANGLE, START_ANGLE + TOTAL_ARC)}
-              fill="none"
-              stroke={trackColor}
-              strokeWidth="10"
-              strokeLinecap="round"
-              style={{ cursor: 'pointer' }}
-              onClick={onArcClick}
-            />
-            {/* Arco de valor */}
-            {intensity > 0.005 && (
-              <path
-                d={arcPath(cx, cy, arcR, START_ANGLE, endAngle)}
-                fill="none"
-                stroke="#06B6D4"
-                strokeWidth="5"
-                strokeLinecap="round"
-                style={{ cursor: 'pointer', pointerEvents: 'none' }}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+            {/* Valor numérico en Hz */}
+            <span style={{
+              fontSize: '11px', fontWeight: 700, color: valueColor,
+              fontFamily: "'Geist Mono', monospace", letterSpacing: '0.04em',
+            }}>
+              {value.toExponential(2)} Hz
+            </span>
+
+            {/* Contenedor del knob */}
+            <div
+              ref={knobRef}
+              style={{
+                position: 'relative',
+                width: `${KNOB_SIZE}px`,
+                height: `${KNOB_SIZE}px`,
+                cursor: 'grab',
+                touchAction: 'none',
+                overflow: 'visible',
+              }}
+              onPointerDown={onPointerDown}
+              onPointerMove={onPointerMove}
+              onPointerUp={onPointerUp}
+              onPointerLeave={onPointerUp}
+              onWheel={onWheel}
+              role="slider"
+              aria-label={`${label}: ${value.toExponential(2)} Hz`}
+              aria-valuemin={min}
+              aria-valuemax={max}
+              aria-valuenow={value}
+            >
+              {/* Capa 1 — arcos SVG (con click interactivo en la pista) */}
+              <svg
+                width={KNOB_SIZE}
+                height={KNOB_SIZE}
+                viewBox={`0 0 ${KNOB_SIZE} ${KNOB_SIZE}`}
+                style={{ position: 'absolute', top: 0, left: 0 }}
+                aria-hidden="true"
+              >
+                {/* Pista completa — clickeable */}
+                <path
+                  d={arcPath(cx, cy, arcR, START_ANGLE, START_ANGLE + TOTAL_ARC)}
+                  fill="none"
+                  stroke={trackColor}
+                  strokeWidth="10"
+                  strokeLinecap="round"
+                  style={{ cursor: 'pointer' }}
+                  onClick={onArcClick}
+                />
+                {/* Arco de valor */}
+                {intensity > 0.005 && (
+                  <path
+                    d={arcPath(cx, cy, arcR, START_ANGLE, endAngle)}
+                    fill="none"
+                    stroke="#06B6D4"
+                    strokeWidth="5"
+                    strokeLinecap="round"
+                    style={{ cursor: 'pointer', pointerEvents: 'none' }}
+                  />
+                )}
+              </svg>
+
+              {/* Capa 2 — perilla rotante */}
+              <img
+                src="/perilla.png"
+                alt="coupling knob"
+                style={{
+                  position: 'absolute',
+                  top: `${IMG_OFF}px`,
+                  left: `${IMG_OFF}px`,
+                  width: `${IMG_SIZE}px`,
+                  height: `${IMG_SIZE}px`,
+                  objectFit: 'contain',
+                  transform: `rotate(${knobRotation + PERILLA_OFFSET}deg)`,
+                  transition: 'transform 0.05s linear',
+                  pointerEvents: 'none',
+                  filter: isDark ? 'none' : 'brightness(0.85)',
+                }}
+                draggable={false}
               />
-            )}
-          </svg>
+            </div>
+          </div>
 
-          {/* Capa 2 — perilla rotante */}
-          <img
-            src="/perilla.png"
-            alt="coupling knob"
-            style={{
-              position: 'absolute',
-              top: `${IMG_OFF}px`,
-              left: `${IMG_OFF}px`,
-              width: `${IMG_SIZE}px`,
-              height: `${IMG_SIZE}px`,
-              objectFit: 'contain',
-              transform: `rotate(${knobRotation + PERILLA_OFFSET}deg)`,
-              transition: 'transform 0.05s linear',
-              pointerEvents: 'none',
-              filter: isDark ? 'none' : 'brightness(0.85)',
-            }}
-            draggable={false}
+          <VerticalFader
+            value={value}
+            min={min}
+            max={max}
+            onChange={onChange}
+            isDark={isDark}
+            height={168}
+            ariaLabel={faderAriaLabel ?? `${label} — fader`}
           />
         </div>
 
@@ -333,7 +357,7 @@ export default function CouplingKnob({ value, min, max, onChange, label, isDark 
         </div>
 
         {/* Min / Max */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', width: `${KNOB_SIZE}px`, marginTop: '2px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', width: `${CONTROL_STRIP_W}px`, marginTop: '2px' }}>
           <span style={{ fontSize: '9px', color: textColor, fontFamily: "'Geist Mono', monospace" }}>10⁴ Hz</span>
           <span style={{ fontSize: '9px', color: textColor, fontFamily: "'Geist Mono', monospace" }}>10⁵ Hz</span>
         </div>

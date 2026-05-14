@@ -46,6 +46,7 @@ export const t = {
       csv: 'CSV',
       json: 'JSON',
       photonReadout: 'LECTURA DE FOTÓN',
+      faderOmega: 'Fader vertical — fuerza de acoplamiento Ω (frecuencia)',
     },
 
     levels: {
@@ -80,6 +81,54 @@ export const t = {
       play: 'REPRODUCIR',
       pause: 'PAUSAR',
       reset: 'REINICIAR',
+      notebook: 'CUADERNO',
+    },
+
+    notebook: {
+      close: 'Cerrar',
+      title: 'CUADERNO DE LABORATORIO',
+      subtitle: 'Zitterbewegung Engine v6.0 — Registro de observaciones',
+      studentName: 'Nombre del alumno',
+      studentNamePlaceholder: 'Escribe tu nombre aquí…',
+      date: 'Fecha',
+      downloadPdf: 'Descargar PDF',
+      missionLabel: 'Misión',
+      context: 'Contexto',
+      question: 'Pregunta',
+      answerPlaceholder: 'Escribe tu respuesta aquí…',
+      levelLabel: 'Nivel',
+      missions: [
+        {
+          title: 'Misión 1 — Partícula sin masa',
+          level: 'Principiante',
+          context: 'Sin masa, la partícula viaja en línea recta a la velocidad c simulada. No hay Zitterbewegung.',
+          question: '¿Qué observas en la gráfica ⟨S₁(t)⟩ cuando Ω está al mínimo (10⁴ Hz)? ¿La curva es plana o tiene oscilaciones? ¿Por qué?',
+        },
+        {
+          title: 'Misión 2 — Añadiendo masa',
+          level: 'Principiante',
+          context: 'Al añadir masa (subir Ω), aparece el Zitterbewegung. Cuanto mayor la masa, más rápidas y visibles las oscilaciones.',
+          question: '¿Cómo cambia la amplitud y la frecuencia de las oscilaciones al aumentar Ω gradualmente? ¿Qué representa físicamente esa oscilación?',
+        },
+        {
+          title: 'Misión 3 — El Mar de Dirac',
+          level: 'Académico',
+          context: 'Bajo 2mc² el fotón no puede crear pares; su energía es insuficiente para sacar un electrón del mar de Dirac.',
+          question: '¿Qué sucede en la visualización cuando hν ≥ 2mc²? Describe el par electrón-positrón creado y explica qué es el "hueco" en el Mar de Dirac.',
+        },
+        {
+          title: 'Misión 4 — Análisis FFT',
+          level: 'Académico',
+          context: 'El pico espectral en el análisis FFT de ⟨S₁(t)⟩ corresponde a la frecuencia de Zitterbewegung ν_ZB = 2mc²/h.',
+          question: '¿En qué valor de frecuencia aparece el pico dominante? ¿Qué relación tiene con el parámetro Ω configurado? ¿Cómo usarías esto para "medir" la masa de una partícula?',
+        },
+        {
+          title: 'Misión 5 — Comparación de solvers',
+          level: 'Avanzado',
+          context: 'RK45 es un método de Runge-Kutta adaptativo; Crank-Nicolson es un método implícito unitario. Ambos deben converger al mismo resultado físico.',
+          question: '¿Coinciden las curvas de RK45 y Crank-Nicolson? ¿Cuál es la diferencia máxima observada? ¿Qué implica esa diferencia sobre la precisión numérica de cada método?',
+        },
+      ],
     },
   },
 
@@ -125,6 +174,7 @@ export const t = {
       csv: 'CSV',
       json: 'JSON',
       photonReadout: 'PHOTON READOUT',
+      faderOmega: 'Vertical fader — coupling Ω (frequency)',
     },
 
     levels: {
@@ -159,6 +209,54 @@ export const t = {
       play: 'PLAY',
       pause: 'PAUSE',
       reset: 'RESET',
+      notebook: 'NOTEBOOK',
+    },
+
+    notebook: {
+      close: 'Close',
+      title: 'LAB NOTEBOOK',
+      subtitle: 'Zitterbewegung Engine v6.0 — Observation Log',
+      studentName: 'Student name',
+      studentNamePlaceholder: 'Type your name here…',
+      date: 'Date',
+      downloadPdf: 'Download PDF',
+      missionLabel: 'Mission',
+      context: 'Context',
+      question: 'Question',
+      answerPlaceholder: 'Write your answer here…',
+      levelLabel: 'Level',
+      missions: [
+        {
+          title: 'Mission 1 — Massless Particle',
+          level: 'Beginner',
+          context: 'Without mass, the particle travels in a straight line at the simulated speed c. No Zitterbewegung occurs.',
+          question: 'What do you observe in the ⟨S₁(t)⟩ graph when Ω is at its minimum (10⁴ Hz)? Is the curve flat or oscillating? Why?',
+        },
+        {
+          title: 'Mission 2 — Adding Mass',
+          level: 'Beginner',
+          context: 'Adding mass (increasing Ω) causes Zitterbewegung to appear. The higher the mass, the faster and more visible the oscillations.',
+          question: 'How do the amplitude and frequency of oscillations change as you gradually increase Ω? What does this oscillation represent physically?',
+        },
+        {
+          title: 'Mission 3 — The Dirac Sea',
+          level: 'Academic',
+          context: 'Below 2mc² the photon cannot create pairs; its energy is insufficient to pull an electron out of the Dirac sea.',
+          question: 'What happens in the visualization when hν ≥ 2mc²? Describe the electron-positron pair created and explain what the "hole" in the Dirac Sea is.',
+        },
+        {
+          title: 'Mission 4 — FFT Analysis',
+          level: 'Academic',
+          context: 'The spectral peak in the FFT analysis of ⟨S₁(t)⟩ corresponds to the Zitterbewegung frequency ν_ZB = 2mc²/h.',
+          question: 'At what frequency does the dominant peak appear? How does it relate to the configured Ω parameter? How could you use this to "measure" a particle\'s mass?',
+        },
+        {
+          title: 'Mission 5 — Solver Comparison',
+          level: 'Advanced',
+          context: 'RK45 is an adaptive Runge-Kutta method; Crank-Nicolson is a unitary implicit method. Both should converge to the same physical result.',
+          question: 'Do the RK45 and Crank-Nicolson curves match? What is the maximum observed difference? What does that difference imply about each method\'s numerical precision?',
+        },
+      ],
     },
   },
 };

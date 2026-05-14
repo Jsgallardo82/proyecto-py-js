@@ -116,6 +116,7 @@ export default function ControlsPanel() {
         onChange={(val) => dispatch({ type: 'SET_OMEGA', payload: val })}
         label={tr.controls.coupling}
         isDark={appState.theme === 'dark'}
+        faderAriaLabel={tr.controls.faderOmega}
       />
 
       {/* ── Solver selector ──────────────────────────────────────────── */}

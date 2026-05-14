@@ -51,9 +51,9 @@ function ActiveView() {
 
   switch (state.activeTab) {
     case 'particle': return <ParticleView />;
-    case 'dirac': return <DiracSeaView />;
-    case '3d': return <ThreeDView />;
-    default: return <DataDashboard />;
+    case 'dirac':    return <DiracSeaView />;
+    case '3d':       return <ThreeDView />;
+    default:         return <DataDashboard />;
   }
 }
 
