@@ -1,21 +1,20 @@
 'use client';
 
-/**
- * DiracSea3D — Mar de Dirac como 3 planos horizontales.
- *
- * Zona positiva (índigo), zona prohibida (naranja), zona negativa (magenta).
- * Semáforo visual del espectro energético.
- */
-
+import { useRef } from 'react';
 import * as THREE from 'three';
 
 export default function DiracSea3D({ diracData }) {
   const hasPair = diracData?.pair_created ?? false;
+  const mc2 = diracData?.mc2 ?? 1250;
+
+  // Scale mc² to 3D display units (z_scale = 0.001)
+  const mc2_3d = Math.max(0.05, mc2 * 0.001);
+  const halfGap = mc2_3d;
 
   return (
     <group position={[0, -3, 0]}>
-      {/* Zona de energía positiva (E >= mc²) */}
-      <mesh position={[0, 0, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+      {/* Positive energy zone — at E = +mc² */}
+      <mesh position={[0, halfGap, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <planeGeometry args={[8, 8]} />
         <meshStandardMaterial
           color="#4F46E5"
@@ -25,8 +24,8 @@ export default function DiracSea3D({ diracData }) {
         />
       </mesh>
 
-      {/* Zona prohibida (banda 2mc²) */}
-      <mesh position={[0, 0.3, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+      {/* Forbidden zone — centered at E = 0, height = 2·mc² */}
+      <mesh position={[0, 0, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <planeGeometry args={[8, 8]} />
         <meshStandardMaterial
           color="#F97316"
@@ -36,8 +35,8 @@ export default function DiracSea3D({ diracData }) {
         />
       </mesh>
 
-      {/* Zona de energía negativa (E <= -mc²) */}
-      <mesh position={[0, -0.3, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+      {/* Negative energy zone — at E = -mc² */}
+      <mesh position={[0, -halfGap, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <planeGeometry args={[8, 8]} />
         <meshStandardMaterial
           color="#EC4899"
@@ -47,20 +46,14 @@ export default function DiracSea3D({ diracData }) {
         />
       </mesh>
 
-      {/* Línea divisoria */}
-      <mesh position={[0, 0.15, 0]} rotation={[0, 0, Math.PI / 2]}>
-        <boxGeometry args={[0.01, 8, 0.01]} />
-        <meshBasicMaterial color="#6B7280" transparent opacity={0.3} />
-      </mesh>
-
-      {/* Indicador de creación de par */}
+      {/* Pair creation indicator — only when physically created */}
       {hasPair && (
-        <mesh position={[2, 0.5, 0]}>
-          <sphereGeometry args={[0.1, 16, 16]} />
+        <mesh position={[2, halfGap * 0.3, 0]}>
+          <sphereGeometry args={[0.08, 12, 12]} />
           <meshStandardMaterial
             color="#FBBF24"
             emissive="#FBBF24"
-            emissiveIntensity={1}
+            emissiveIntensity={0.6}
           />
         </mesh>
       )}

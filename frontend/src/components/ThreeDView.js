@@ -13,7 +13,7 @@
 
 import { Suspense, useEffect, useState, useCallback, useRef } from 'react';
 import { Canvas } from '@react-three/fiber';
-import { OrbitControls, Stars, Grid } from '@react-three/drei';
+import { OrbitControls, Grid } from '@react-three/drei';
 import { useSimulationContext } from '../context/SimulationContext';
 import Electron3D from './three/Electron3D';
 import Trajectory3D from './three/Trajectory3D';
@@ -27,17 +27,16 @@ function Scene() {
   return (
     <>
       <SceneLights />
-      <Stars radius={100} depth={50} count={5000} factor={4} saturation={0} fade speed={1} />
       <Grid
-        position={[0, -2, 0]}
-        args={[20, 20]}
-        cellSize={0.5}
+        position={[0, -3, 0]}
+        args={[12, 12]}
+        cellSize={1}
         cellThickness={0.5}
         cellColor="#1E2A3A"
         sectionSize={2}
         sectionThickness={1}
-        sectionColor="#06B6D4"
-        fadeDistance={15}
+        sectionColor="#4B5563"
+        fadeDistance={20}
         fadeStrength={1}
         infiniteGrid
       />
@@ -45,7 +44,7 @@ function Scene() {
       {simData && (
         <>
           <Electron3D simData={simData} playhead={state.playhead} />
-          <Trajectory3D simData={simData} />
+          <Trajectory3D simData={simData} playhead={state.playhead} />
         </>
       )}
 

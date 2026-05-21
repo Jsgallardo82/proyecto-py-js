@@ -28,6 +28,19 @@ export function useSimulation() {
   const accumulatorRef = useRef(0);
   const playheadRef = useRef(0);
 
+  // ── Refs para auto-simulación en tiempo real ────────────────────
+  const autoSimSkipRef = useRef(false);
+  const debounceRef = useRef(null);
+  const hasDataRef = useRef(false);
+  const simulateRef = useRef(null);
+  const simulateDiracRef = useRef(null);
+  const autoSimulateRef = useRef(null);
+  const autoSimulateDiracRef = useRef(null);
+  const totalFramesRef = useRef(0);
+  const simDataRef = useRef(null);
+  const playRef = useRef(null);
+  const pendingAutoPlayRef = useRef(false);
+
   // ── Bootstrap pipeline (16 pasos) ──────────────────────────────────
   useEffect(() => {
     let isMounted = true;
@@ -109,7 +122,10 @@ export function useSimulation() {
       }
 
       const data = await res.json();
+      console.log('[simulate] data recibida, S1 length:', data.S1?.length);
       dispatch({ type: 'SET_SIM_DATA', payload: data });
+      dispatch({ type: 'SET_PLAYING', payload: true });
+      pendingAutoPlayRef.current = true;
 
       // Compute FFT client-side for FFT mode
       if (state.fftMode && data.S1?.length > 0) {
@@ -142,6 +158,61 @@ export function useSimulation() {
       dispatch({ type: 'SET_DIRAC_DATA', payload: data });
     } catch (e) {
       dispatch({ type: 'SET_ERROR', payload: `Network error: ${e.message}` });
+    }
+  }, [state.omega, state.photonEnergyFactor, dispatch]);
+
+  // ── Auto-simulate (live, without resetting playhead) ─────────────────
+  const autoSimulate = useCallback(async () => {
+    dispatch({ type: 'SET_LOADING', payload: true });
+    try {
+      const res = await fetch(`${API_BASE}/simulate/zb`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          omega: state.omega,
+          t_max: state.tMax,
+          n_steps: state.nSteps,
+          solver: state.solver,
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        dispatch({ type: 'SET_ERROR', payload: err.detail || 'Simulation failed' });
+        return;
+      }
+      const data = await res.json();
+      dispatch({ type: 'SET_SIM_DATA_LIVE', payload: data });
+      if (state.fftMode && data.S1?.length > 0) {
+        const fftData = computeClientFFT(data.S1, data.t);
+        dispatch({ type: 'SET_FFT_DATA', payload: fftData });
+      }
+    } catch (e) {
+      dispatch({ type: 'SET_ERROR', payload: `Network error: ${e.message}` });
+      dispatch({ type: 'SET_LOADING', payload: false });
+    }
+  }, [state.omega, state.tMax, state.nSteps, state.solver, state.fftMode, dispatch]);
+
+  const autoSimulateDirac = useCallback(async () => {
+    dispatch({ type: 'SET_LOADING', payload: true });
+    try {
+      const res = await fetch(`${API_BASE}/simulate/dirac`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          omega: state.omega,
+          photon_energy_factor: state.photonEnergyFactor,
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        dispatch({ type: 'SET_ERROR', payload: err.detail || 'Dirac simulation failed' });
+        return;
+      }
+      const data = await res.json();
+      dispatch({ type: 'SET_DIRAC_DATA', payload: data });
+    } catch (e) {
+      dispatch({ type: 'SET_ERROR', payload: `Network error: ${e.message}` });
+      dispatch({ type: 'SET_LOADING', payload: false });
     }
   }, [state.omega, state.photonEnergyFactor, dispatch]);
 
@@ -185,14 +256,19 @@ export function useSimulation() {
 
   // ── Animation loop (fixed Δt = 1/120) ──────────────────────────────
   const play = useCallback(() => {
-    if (!state.simData) return;
+    const data = simDataRef.current;
+    if (!data?.t?.length) {
+      console.warn('[play] bloqueado: sin simData');
+      return;
+    }
+    console.log('[play] arrancando, frames:', data.t.length);
     dispatch({ type: 'SET_PLAYING', payload: true });
     dispatch({ type: 'SET_ENGINE_STATE', payload: ENGINE_STATES.RUNNING });
     lastTimeRef.current = null;
     accumulatorRef.current = 0;
     playheadRef.current = state.playhead;
 
-    const totalFrames = state.simData.t.length;
+    totalFramesRef.current = data.t.length;
 
     function loop(timestamp) {
       if (lastTimeRef.current === null) lastTimeRef.current = timestamp;
@@ -200,23 +276,25 @@ export function useSimulation() {
       lastTimeRef.current = timestamp;
       accumulatorRef.current += frameTime;
 
+      const frames = totalFramesRef.current;
       while (accumulatorRef.current >= FIXED_DT) {
-        playheadRef.current = Math.min(playheadRef.current + 1, totalFrames - 1);
+        playheadRef.current = Math.min(playheadRef.current + 1, frames - 1);
         accumulatorRef.current -= FIXED_DT;
       }
 
       dispatch({ type: 'SET_PLAYHEAD', payload: playheadRef.current });
 
-      if (playheadRef.current < totalFrames - 1) {
+      if (frames > 0 && playheadRef.current < frames - 1) {
         animFrameRef.current = requestAnimationFrame(loop);
       } else {
+        console.log('[play] loop terminado');
         dispatch({ type: 'SET_PLAYING', payload: false });
         dispatch({ type: 'SET_ENGINE_STATE', payload: ENGINE_STATES.PAUSED });
       }
     }
 
     animFrameRef.current = requestAnimationFrame(loop);
-  }, [state.simData, state.playhead, dispatch, animFrameRef]);
+  }, [state.playhead, dispatch, animFrameRef]);
 
   const pause = useCallback(() => {
     cancelAnimationFrame(animFrameRef.current);
@@ -232,6 +310,7 @@ export function useSimulation() {
   // ── Load preset ─────────────────────────────────────────────────────
   const loadPreset = useCallback(
     async (preset) => {
+      autoSimSkipRef.current = true;
       dispatch({ type: 'SET_OMEGA', payload: preset.omega });
       dispatch({ type: 'SET_T_MAX', payload: preset.t_max });
       dispatch({ type: 'SET_N_STEPS', payload: preset.n_steps });
@@ -254,9 +333,11 @@ export function useSimulation() {
         const data = await res.json();
         dispatch({ type: 'SET_SIM_DATA', payload: data });
         dispatch({ type: 'SET_PLAYING', payload: true });
+        pendingAutoPlayRef.current = true;
       } catch (e) {
         dispatch({ type: 'SET_ERROR', payload: `Network error: ${e.message}` });
       }
+      autoSimSkipRef.current = false;
     },
     [dispatch],
   );
@@ -324,6 +405,66 @@ export function useSimulation() {
       dispatch({ type: 'SET_ERROR', payload: err.message });
     }
   }, [state.omega, state.nSteps, state.solver, dispatch]);
+
+  // ── Sync refs ──────────────────────────────────────────────────────
+  useEffect(() => { simulateRef.current = simulate; }, [simulate]);
+  useEffect(() => { simulateDiracRef.current = simulateDirac; }, [simulateDirac]);
+  useEffect(() => { autoSimulateRef.current = autoSimulate; }, [autoSimulate]);
+  useEffect(() => { autoSimulateDiracRef.current = autoSimulateDirac; }, [autoSimulateDirac]);
+  useEffect(() => { simDataRef.current = state.simData; }, [state.simData]);
+  useEffect(() => { playRef.current = play; }, [play]);
+  useEffect(() => { hasDataRef.current = !!(state.simData || state.diracData); }, [state.simData, state.diracData]);
+  useEffect(() => {
+    totalFramesRef.current = state.simData?.t?.length ?? 0;
+  }, [state.simData]);
+
+  // ── Auto-play: 1 clic (simulate → play automático) ────────────────
+  useEffect(() => {
+    if (pendingAutoPlayRef.current && state.simData != null) {
+      pendingAutoPlayRef.current = false;
+      console.log('[auto-play] disparando play()');
+      playRef.current?.();
+    }
+  }, [state.simData]);
+
+  // ── Auto-sim ZB (parámetros físicos) ─────────────────────────────
+  useEffect(() => {
+    if (!hasDataRef.current) return;
+    if (autoSimSkipRef.current) return;
+
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+
+    debounceRef.current = setTimeout(() => {
+      autoSimulateRef.current?.();
+    }, 400);
+
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [
+    state.omega,
+    state.tMax,
+    state.nSteps,
+    state.solver,
+  ]);
+
+  // ── Auto-sim Dirac (photonEnergyFactor) ──────────────────────────
+  useEffect(() => {
+    if (!hasDataRef.current) return;
+    if (autoSimSkipRef.current) return;
+
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+
+    debounceRef.current = setTimeout(() => {
+      autoSimulateDiracRef.current?.();
+    }, 400);
+
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [
+    state.photonEnergyFactor,
+  ]);
 
   return {
     state,

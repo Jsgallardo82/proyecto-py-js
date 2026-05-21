@@ -1,16 +1,10 @@
 'use client';
 
-/**
- * TelemetryPanel — Readout en tiempo real de métricas de simulación.
- *
- * Muestra: FREQUENCY (ν_ZB), AMPLITUDE, PARTICLE MASS, NORMALIZATION ERROR.
- * Fuente: Geist Mono, valores numéricos actualizados a 20 Hz.
- * Engine Spec v6.0 §3 (Telemetry & Observability), §13 (Vista 1).
- */
-
 import { useSimulationContext } from '../context/SimulationContext';
 import { useAppContext } from '../context/AppContext';
 import { t } from '../lib/translations';
+
+
 
 export default function TelemetryPanel() {
   const { state }           = useSimulationContext();
@@ -18,8 +12,8 @@ export default function TelemetryPanel() {
   const { telemetry, simData } = state;
   const tr = t[appState.lang];
 
-  // Color para el valor de masa: primario del tema en vez de blanco fijo
   const C_VALUE_NEUTRAL = 'var(--text-primary)';
+  const isError = telemetry.normalization_error > 1e-9;
 
   const rows = [
     {
@@ -48,8 +42,8 @@ export default function TelemetryPanel() {
       value: telemetry.normalization_error > 0
         ? telemetry.normalization_error.toExponential(2)
         : '0.00e+00',
-      // rojo si fuera de spec, verde si OK — colores científicos fijos
-      color: telemetry.normalization_error > 1e-9 ? '#EF4444' : '#10B981',
+      color: isError ? '#EF4444' : '#10B981',
+      pulse: isError,
     },
     {
       label: 'SOLVER',
@@ -89,6 +83,7 @@ export default function TelemetryPanel() {
           borderRadius: '50%',
           background: state.backendConnected ? '#10B981' : '#EF4444',
           flexShrink: 0,
+          transition: 'background 0.3s',
         }} />
         <span style={{
           fontSize: '10px',
@@ -115,12 +110,16 @@ export default function TelemetryPanel() {
             }}>
               {row.label}
             </span>
-            <span style={{
-              fontSize: '12px',
-              fontWeight: 600,
-              color: row.color,
-              fontFamily: "'Geist Mono', monospace",
-            }}>
+            <span
+              style={{
+                fontSize: '12px',
+                fontWeight: 600,
+                color: row.color,
+                fontFamily: "'Geist Mono', monospace",
+                transition: 'color 0.3s',
+
+              }}
+            >
               {row.value}
             </span>
           </div>

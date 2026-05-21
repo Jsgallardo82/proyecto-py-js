@@ -15,7 +15,7 @@ import { hexToRgb } from '../lib/utils';
 import NotebookView from './NotebookView';
 
 export default function BottomBar() {
-  const { state, simulate, play, pause, reset } = useSimulation();
+  const { state, simulate, simulateDirac, play, pause, reset } = useSimulation();
   const { state: appState } = useAppContext();
   const { isPlaying, loading, simData, engineState } = state;
   const tr = t[appState.lang];
@@ -24,7 +24,10 @@ export default function BottomBar() {
   const [notebookOpen, setNotebookOpen] = useState(false);
 
   const handlePlayPause = () => {
-    if (isPlaying) {
+    if (state.activeTab === 'dirac') {
+      // Dirac tab: cada play re-simula el espectro (no usa pause/resume)
+      simulateDirac();
+    } else if (isPlaying) {
       pause();
     } else if (simData) {
       play();

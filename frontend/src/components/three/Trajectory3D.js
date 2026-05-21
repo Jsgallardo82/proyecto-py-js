@@ -1,57 +1,74 @@
 'use client';
 
-/**
- * Trajectory3D — Trayectoria ZB como línea 3D.
- *
- * Dibuja la curva S1(t) como un path en el espacio 3D.
- * Usa TubeGeometry con dispose() para evitar memory leaks GPU.
- */
-
 import { useMemo, useEffect, useRef } from 'react';
 import * as THREE from 'three';
 
-export default function Trajectory3D({ simData }) {
-  const meshRef = useRef();
+export default function Trajectory3D({ simData, playhead = 0 }) {
+  const fullLineRef = useRef();
+  const playedLineRef = useRef();
 
-  if (!simData) return null;
+  const { S1, t } = simData ?? {};
+  const n = S1?.length ?? 0;
 
-  const { S1, t } = simData;
+  const fullPositions = useMemo(() => {
+    if (n === 0) return [];
+    const positions = new Float32Array(n * 3);
+    for (let i = 0; i < n; i++) {
+      positions[i * 3] = S1[i];
+      positions[i * 3 + 1] = 0;
+      positions[i * 3 + 2] = (i / (n - 1)) * 4 - 2;
+    }
+    return positions;
+  }, [S1, n]);
 
-  const points = useMemo(() => {
-    if (!S1 || S1.length === 0) return [];
-    return S1.map((s1, i) => {
-      const x = s1 / 5;
-      const y = 0;
-      const z = (i / S1.length) * 4 - 2;
-      return new THREE.Vector3(x, y, z);
-    });
-  }, [S1]);
+  const playedIndex = Math.min(playhead, n - 1);
 
-  const tubeGeometry = useMemo(() => {
-    if (points.length < 2) return null;
-    const curve = new THREE.CatmullRomCurve3(points);
-    return new THREE.TubeGeometry(curve, 200, 0.02, 8, false);
-  }, [points]);
+  const playedPositions = useMemo(() => {
+    if (n === 0 || playedIndex < 1) return null;
+    const len = playedIndex + 1;
+    const positions = new Float32Array(len * 3);
+    for (let i = 0; i <= playedIndex; i++) {
+      positions[i * 3] = S1[i];
+      positions[i * 3 + 1] = 0;
+      positions[i * 3 + 2] = (i / (n - 1)) * 4 - 2;
+    }
+    return positions;
+  }, [S1, n, playedIndex]);
+
+  const fullGeom = useMemo(() => {
+    if (fullPositions.length === 0) return null;
+    const geom = new THREE.BufferGeometry();
+    geom.setAttribute('position', new THREE.BufferAttribute(fullPositions, 3));
+    return geom;
+  }, [fullPositions]);
+
+  const playedGeom = useMemo(() => {
+    if (!playedPositions) return null;
+    const geom = new THREE.BufferGeometry();
+    geom.setAttribute('position', new THREE.BufferAttribute(playedPositions, 3));
+    return geom;
+  }, [playedPositions]);
 
   useEffect(() => {
     return () => {
-      if (tubeGeometry) {
-        tubeGeometry.dispose();
-      }
+      if (fullGeom) fullGeom.dispose();
+      if (playedGeom) playedGeom.dispose();
     };
-  }, [tubeGeometry]);
+  }, [fullGeom, playedGeom]);
 
-  if (!tubeGeometry) return null;
+  if (!simData || n < 2) return null;
 
   return (
-    <mesh ref={meshRef} geometry={tubeGeometry}>
-      <meshStandardMaterial
-        color="#EF4444"
-        emissive="#EF4444"
-        emissiveIntensity={0.3}
-        transparent
-        opacity={0.7}
-      />
-    </mesh>
+    <group>
+      <line ref={fullLineRef} geometry={fullGeom}>
+        <lineBasicMaterial color="#EF4444" transparent opacity={0.15} />
+      </line>
+
+      {playedGeom && (
+        <line ref={playedLineRef} geometry={playedGeom}>
+          <lineBasicMaterial color="#EF4444" transparent opacity={0.7} />
+        </line>
+      )}
+    </group>
   );
 }
