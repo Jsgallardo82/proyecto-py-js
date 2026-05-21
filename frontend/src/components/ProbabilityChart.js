@@ -1,12 +1,5 @@
 'use client';
 
-/**
- * ProbabilityChart — Gráfica de Probabilidad vs. Tiempo (GT).
- *
- * Muestra |⟨e|ψ(t)⟩|² y |⟨g|ψ(t)⟩|² derivadas de los datos de simulación.
- * Engine Spec v6.0 §13 (Vista 1 — panel inferior derecho).
- */
-
 import { useEffect, useRef, useCallback } from 'react';
 import { useSimulationContext } from '../context/SimulationContext';
 import { useAppContext } from '../context/AppContext';
@@ -50,11 +43,10 @@ export default function ProbabilityChart() {
     const plotW = W - pad.left - pad.right;
     const plotH = H - pad.top - pad.bottom;
 
-    // Title
     ctx.fillStyle  = C.title;
     ctx.font       = 'bold 11px Geist, system-ui';
     ctx.textAlign  = 'left';
-    ctx.fillText('PROBABILITY VS. TIME (GT)', pad.left, pad.top - 8);
+    ctx.fillText('PROBABILITY VS. TIME', pad.left, pad.top - 8);
 
     // Grid
     ctx.strokeStyle = C.grid;
@@ -77,59 +69,71 @@ export default function ProbabilityChart() {
       ctx.fillText(val.toFixed(1), pad.left - 4, pad.top + (j / 4) * plotH + 3);
     }
 
-    // X labels
-    ctx.textAlign = 'center';
-    const xLabels = ['0', 'π/2', 'π', '3π/2', '2π'];
-    for (let i = 0; i <= 4; i++) {
-      ctx.fillText(xLabels[i], pad.left + (i / 4) * plotW, pad.top + plotH + 14);
-    }
-
     const { simData, playhead } = state;
     if (!simData) return;
 
     const n = simData.S1.length;
-    const omega_zb = simData.frecuencia_zb > 0
-      ? 2 * Math.PI * simData.frecuencia_zb * 1e-6
-      : Math.PI / simData.t_max;
+    const tArr = simData.t;
 
     function toX(i) { return pad.left + (i / (n - 1)) * plotW; }
     function toY(v) { return pad.top + (1 - v) * plotH; }
 
-    // Excited state (solid red)
+    // Extract |c_e|² from S1(t): probability = normalized S1
+    // S1 = <σ_y> evolves between -1 and 1. For a two-level system
+    // in the interaction picture, |c_e|² = (1 + <σ_z>)/2.
+    // We derive <σ_z> from the Bloch sphere: <σ_z>² = 1 - <σ_y>² - <σ_x>².
+    // For |ψ(0)⟩ = |e⟩ with no dephasing, <σ_z> = cos(ωt), <σ_y> = sin(ωt),
+    // giving |c_e|² = (1 + cos(ωt))/2 — the Rabi oscillation.
+    // We use S1(= <σ_y>) and reconstruct <σ_z> via the purity constraint.
+    const peArr = new Float64Array(n);
+    for (let i = 0; i < n; i++) {
+      const sy = simData.S1[i];
+      const sz = Math.sqrt(Math.max(0, 1 - sy * sy));
+      peArr[i] = (1 + sz) / 2;
+    }
+
+    // Excited state P_e(t) — solid red
     ctx.strokeStyle = C_EXCITED;
     ctx.lineWidth   = 1.5;
     ctx.setLineDash([]);
     ctx.beginPath();
     for (let i = 0; i < n; i++) {
-      const t  = simData.t[i];
-      const pe = Math.max(0, Math.min(1, 0.5 + 0.5 * Math.cos(omega_zb * t)));
+      const pe = peArr[i];
       if (i === 0) ctx.moveTo(toX(i), toY(pe));
       else ctx.lineTo(toX(i), toY(pe));
     }
     ctx.stroke();
 
-    // Ground state (dashed cyan)
+    // Ground state P_g(t) = 1 − P_e(t) — dashed cyan
     ctx.strokeStyle = C_GROUND;
     ctx.lineWidth   = 1.5;
     ctx.setLineDash([3, 3]);
     ctx.beginPath();
     for (let i = 0; i < n; i++) {
-      const t  = simData.t[i];
-      const pe = Math.max(0, Math.min(1, 0.5 + 0.5 * Math.cos(omega_zb * t)));
-      const pg = 1 - pe;
+      const pg = 1 - peArr[i];
       if (i === 0) ctx.moveTo(toX(i), toY(pg));
       else ctx.lineTo(toX(i), toY(pg));
     }
     ctx.stroke();
     ctx.setLineDash([]);
 
-    // Playhead dot
+    // X-axis labels in μs (physical time)
+    ctx.fillStyle = C.text;
+    ctx.font = "9px 'Geist Mono', monospace";
+    ctx.textAlign = 'center';
+    const tMin = tArr[0];
+    const tMax = tArr[n - 1];
+    for (let i = 0; i <= 4; i++) {
+      const tVal = tMin + (i / 4) * (tMax - tMin);
+      ctx.fillText(tVal.toFixed(0), pad.left + (i / 4) * plotW, pad.top + plotH + 14);
+    }
+    ctx.fillText('t (μs)', pad.left + plotW / 2, pad.top + plotH + 26);
+
+    // Playhead dot (no animation — static position marker)
     if (playhead > 0 && playhead < n) {
-      const t  = simData.t[playhead];
-      const pe = Math.max(0, Math.min(1, 0.5 + 0.5 * Math.cos(omega_zb * t)));
       ctx.fillStyle = C_EXCITED;
       ctx.beginPath();
-      ctx.arc(toX(playhead), toY(pe), 3, 0, Math.PI * 2);
+      ctx.arc(toX(playhead), toY(peArr[playhead]), 3, 0, Math.PI * 2);
       ctx.fill();
     }
   }, []);

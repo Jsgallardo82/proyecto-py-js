@@ -1,13 +1,5 @@
 'use client';
 
-/**
- * ParticleView — Vista 2: Electrón con glow + trail punteado.
- *
- * Engine Spec v6.0 §13 (Vista 2) + mockups img-002, img-003.
- * Canvas2D a 60 FPS. Grid sobre fondo azul marino oscuro.
- * Electrón: círculo cian con glow. Trayectoria: línea punteada persistente.
- */
-
 import { useEffect, useRef, useCallback } from 'react';
 import { useSimulationContext } from '../context/SimulationContext';
 import { useAppContext } from '../context/AppContext';
@@ -44,6 +36,7 @@ export default function ParticleView() {
   const stateRef            = useRef(state);
   const appStateRef         = useRef(appState);
   const trailRef            = useRef([]);
+  const frameRef            = useRef(0);
 
   useEffect(() => { stateRef.current = state; });
   useEffect(() => { appStateRef.current = appState; });
@@ -57,10 +50,11 @@ export default function ParticleView() {
     if (!ctx) return;
     const W = canvas.width;
     const H = canvas.height;
+    frameRef.current++;
+    const frame = frameRef.current;
 
     const C = getThemeColors(appState.theme === 'dark');
 
-    // Clear
     ctx.fillStyle = C.bg;
     ctx.fillRect(0, 0, W, H);
 
@@ -75,20 +69,13 @@ export default function ParticleView() {
       ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
     }
 
-    // ── Label ─────────────────────────────────────────────────────────
-    ctx.fillStyle  = C.label;
-    ctx.font       = "11px 'Geist Mono', monospace";
-    ctx.textAlign  = 'center';
-    ctx.fillText('VACUUM STATE: DIRAC SEA', W / 2, 24);
-
-    const { simData, playhead } = state;
+    const { simData, playhead, omega } = state;
 
     if (!simData || simData.S1.length < 2) {
-      drawElectron(ctx, W / 2, H / 2, 16);
-      ctx.fillStyle  = C.placeholder;
+      ctx.fillStyle = C.placeholder;
       ctx.font       = '13px Geist, system-ui';
       ctx.textAlign  = 'center';
-      ctx.fillText('Ejecuta una simulación para animar la partícula', W / 2, H / 2 + 40);
+      ctx.fillText('Ejecuta una simulación para animar la partícula', W / 2, H / 2);
       return;
     }
 
@@ -153,7 +140,10 @@ export default function ParticleView() {
     ctx.stroke();
 
     // ── Electron ──────────────────────────────────────────────────────
-    drawElectron(ctx, currX, currY, 14);
+    ctx.fillStyle = C_ELECTRON;
+    ctx.beginPath();
+    ctx.arc(currX, currY, 4, 0, Math.PI * 2);
+    ctx.fill();
 
     // ── Progress text ─────────────────────────────────────────────────
     ctx.fillStyle  = C.text;
@@ -192,40 +182,11 @@ export default function ParticleView() {
   return (
     <div
       role="img"
-      aria-label="Vista de partícula: electrón con glow moviéndose según la simulación del Zitterbewegung"
+      aria-label="Vista de partícula: evolución temporal de S₁ (ZB)"
       className="canvas-container"
       style={{ width: '100%', height: '100%' }}
     >
       <canvas ref={canvasRef} style={{ display: 'block', width: '100%', height: '100%' }} />
     </div>
   );
-}
-
-// ── Electron with glow ────────────────────────────────────────────────────
-
-function drawElectron(ctx, x, y, r) {
-  const glow = ctx.createRadialGradient(x, y, 0, x, y, r * 3);
-  glow.addColorStop(0,   'rgba(6, 182, 212, 0.4)');
-  glow.addColorStop(0.5, 'rgba(6, 182, 212, 0.1)');
-  glow.addColorStop(1,   'rgba(6, 182, 212, 0)');
-  ctx.fillStyle = glow;
-  ctx.beginPath();
-  ctx.arc(x, y, r * 3, 0, Math.PI * 2);
-  ctx.fill();
-
-  const grad = ctx.createRadialGradient(x - r * 0.3, y - r * 0.3, r * 0.1, x, y, r);
-  grad.addColorStop(0,   '#A5F3FC');
-  grad.addColorStop(0.6, '#06B6D4');
-  grad.addColorStop(1,   '#0E7490');
-  ctx.fillStyle = grad;
-  ctx.beginPath();
-  ctx.arc(x, y, r, 0, Math.PI * 2);
-  ctx.fill();
-
-  ctx.fillStyle    = '#0A0E27';
-  ctx.font         = `bold ${Math.max(8, r * 0.7)}px Geist, system-ui`;
-  ctx.textAlign    = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText('e⁻', x, y);
-  ctx.textBaseline = 'alphabetic';
 }

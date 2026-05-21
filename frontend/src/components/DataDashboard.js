@@ -36,6 +36,7 @@ function DataDashboardInner() {
   const animRef                 = useRef(null);
   const stateRef                = useRef(state);
   const appStateRef             = useRef(appState);
+  const frameRef                = useRef(0);
 
   useEffect(() => { stateRef.current = state; });
   useEffect(() => { appStateRef.current = appState; });
@@ -49,6 +50,8 @@ function DataDashboardInner() {
     if (!ctx) return;
     const W = canvas.width;
     const H = canvas.height;
+    frameRef.current++;
+    const frame = frameRef.current;
 
     const C = getThemeColors(appState.theme === 'dark');
 
@@ -148,18 +151,49 @@ function DataDashboardInner() {
     }
     ctx.stroke();
 
-    // ── ZB curve ─────────────────────────────────────────────────────
+    // ── ZB curve — visible portion (up to playhead) ────────────────
+    const ph = Math.max(0, Math.min(playhead, n - 1));
     ctx.strokeStyle = C_ZITTER;
     ctx.lineWidth = 2;
     ctx.setLineDash([]);
     ctx.beginPath();
-    for (let i = 0; i < n; i++) {
+    for (let i = 0; i <= ph; i++) {
       const x = toX(tArr[i]);
       const y = toY(S1[i]);
       if (i === 0) ctx.moveTo(x, y);
       else ctx.lineTo(x, y);
     }
     ctx.stroke();
+
+    // ── Ghost future curve (faint, beyond playhead) ────────────────
+    if (ph < n - 1) {
+      ctx.strokeStyle = 'rgba(239, 68, 68, 0.08)';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([2, 4]);
+      ctx.beginPath();
+      for (let i = ph; i < n; i++) {
+        const x = toX(tArr[i]);
+        const y = toY(S1[i]);
+        if (i === ph) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    // ── Trailing glow behind playhead ──────────────────────────────
+    if (ph > 1) {
+      const glowX = toX(tArr[ph]);
+      const glowY = toY(S1[ph]);
+      const glow = ctx.createRadialGradient(glowX, glowY, 0, glowX, glowY, 20);
+      glow.addColorStop(0, 'rgba(239, 68, 68, 0.3)');
+      glow.addColorStop(0.5, 'rgba(239, 68, 68, 0.1)');
+      glow.addColorStop(1, 'rgba(239, 68, 68, 0)');
+      ctx.fillStyle = glow;
+      ctx.beginPath();
+      ctx.arc(glowX, glowY, 20, 0, Math.PI * 2);
+      ctx.fill();
+    }
 
     // ── Comparison solver curves ──────────────────────────────────────
     if (comparisonData?.cn) {
@@ -181,6 +215,8 @@ function DataDashboardInner() {
     // ── Playhead marker ───────────────────────────────────────────────
     if (playhead > 0 && playhead < n) {
       const markerX = toX(tArr[playhead]);
+
+      // Triangle marker
       ctx.fillStyle = C_ZITTER;
       ctx.beginPath();
       ctx.moveTo(markerX, pad.top + plotH + 4);
@@ -189,7 +225,8 @@ function DataDashboardInner() {
       ctx.closePath();
       ctx.fill();
 
-      ctx.strokeStyle = 'rgba(239,68,68,0.4)';
+      // Dashed vertical line
+      ctx.strokeStyle = 'rgba(239,68,68,0.5)';
       ctx.lineWidth = 1;
       ctx.setLineDash([2, 2]);
       ctx.beginPath();

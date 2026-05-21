@@ -35,6 +35,7 @@ from .hamiltoniano import (
     build_initial_state,
     build_spin_observable,
     compute_zeta_minus,
+    compute_zeta_prime,
     compute_simulated_mass,
 )
 
@@ -446,38 +447,55 @@ def _analyze_zb(
 
 def run_dirac_simulation(omega: float, photon_energy_factor: float) -> dict:
     """
-    Calcula el espectro energético para la vista del Mar de Dirac.
-
-    Parametriza los niveles de energía en función de ω (masa simulada)
-    y determina si el fotón tiene energía suficiente para crear un par.
+    Calcula el espectro energético relativista E(k) = ±√((ζ′·k)² + mc²²)
+    para la visualización del Mar de Dirac con física real del modelo EQC.
 
     Args:
         omega:               Fuerza de acoplamiento Ω [Hz].
         photon_energy_factor: Energía del fotón en unidades de mc² [0, 4].
 
     Returns:
-        dict con niveles de energía, umbral, resultado del fotón.
+        dict con curva de dispersión, densidad de estados, umbral de pares.
     """
     mass = compute_simulated_mass(compute_zeta_minus(omega))
 
-    # Energía de masa (ζ₋ actúa como mc² en el sistema EQC)
-    mc2 = compute_zeta_minus(omega)  # [≡ mc²/ℏ en unidades de Hz]
+    # Parámetros del mapeo EQC → Dirac 1+1D
+    mc2 = compute_zeta_minus(omega)          # ζ₋ = mc²/ℏ [Hz]
+    zeta_prime = compute_zeta_prime()         # ζ′ = λ_a²/Δ_a = 1250 Hz
 
     photon_energy = photon_energy_factor * mc2
     threshold = DIRAC_THRESHOLD_FACTOR * mc2
-
     pair_created = photon_energy >= threshold
 
-    # Niveles discretos del espectro (visualización)
-    n_levels = 10
-    positive_levels = [mc2 + i * 0.5 * mc2 for i in range(n_levels)]
-    negative_levels = [-(mc2 + i * 0.5 * mc2) for i in range(n_levels)]
+    # Curva de dispersión relativista: E(k) = ±√((ζ′·k)² + mc²²)
+    # k es el momento efectivo (autovalor de la cuadratura del campo)
+    n_k = 30
+    k_max = 3.0
+    k_values = [k_max * i / (n_k - 1) for i in range(n_k)]
+
+    positive_branch: list[float] = []
+    negative_branch: list[float] = []
+    dos: list[float] = []
+
+    for k in k_values:
+        ek = float(np.sqrt((zeta_prime * k) ** 2 + mc2 ** 2))
+        positive_branch.append(ek)
+        negative_branch.append(-ek)
+        # ρ(E) = |E| / √(E² − mc²²)  — cap a 10 cerca divergencia 1D
+        if ek > mc2 * 1.001:
+            d = ek / np.sqrt(ek ** 2 - mc2 ** 2)
+        else:
+            d = 10.0
+        dos.append(float(min(d, 10.0)))
 
     return {
         "mc2": float(mc2),
+        "zeta_prime": float(zeta_prime),
         "mass_simulada": float(mass),
-        "positive_levels": positive_levels,
-        "negative_levels": negative_levels,
+        "k_values": k_values,
+        "positive_branch": positive_branch,
+        "negative_branch": negative_branch,
+        "dos": dos,
         "threshold_energy": float(threshold),
         "photon_energy": float(photon_energy),
         "pair_created": bool(pair_created),

@@ -108,12 +108,15 @@ class ZBSimulationResponse(BaseModel):
 
 
 class DiracSimulationResponse(BaseModel):
-    """Response de POST /simulate/dirac"""
+    """Response de POST /simulate/dirac — espectro relativista E(k) vs k"""
 
     mc2: float
+    zeta_prime: float
     mass_simulada: float
-    positive_levels: list[float]
-    negative_levels: list[float]
+    k_values: list[float]
+    positive_branch: list[float]
+    negative_branch: list[float]
+    dos: list[float]
     threshold_energy: float
     photon_energy: float
     pair_created: bool

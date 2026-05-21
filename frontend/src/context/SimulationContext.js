@@ -145,6 +145,39 @@ function simulationReducer(state, action) {
         },
       };
 
+    case 'SET_SIM_DATA_LIVE': {
+      const oldPlayhead = state.playhead;
+      const oldData = state.simData;
+      let newPlayhead = 0;
+      if (oldData?.t?.length && action.payload?.t?.length) {
+        const idx = Math.min(oldPlayhead, oldData.t.length - 1);
+        const currentT = oldData.t[idx] ?? 0;
+        const newT = action.payload.t;
+        let nearest = 0;
+        let minDiff = Infinity;
+        for (let i = 0; i < newT.length; i++) {
+          const diff = Math.abs(newT[i] - currentT);
+          if (diff < minDiff) { minDiff = diff; nearest = i; }
+        }
+        newPlayhead = nearest;
+      }
+      return {
+        ...state,
+        simData: action.payload,
+        loading: false,
+        error: null,
+        playhead: newPlayhead,
+        telemetry: {
+          frecuencia_zb: action.payload?.frecuencia_zb ?? 0,
+          amplitud: action.payload?.amplitud ?? 0,
+          masa_simulada: action.payload?.masa_simulada ?? 0,
+          normalization_error: action.payload?.normalization_error ?? 0,
+          elapsed_ms: action.payload?.elapsed_ms ?? 0,
+          dt: 1 / 120,
+        },
+      };
+    }
+
     case 'SET_DIRAC_DATA':
       return {
         ...state,
